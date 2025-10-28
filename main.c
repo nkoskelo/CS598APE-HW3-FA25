@@ -15,6 +15,7 @@ unsigned long long randomU64() {
   seed ^= (seed >> 35);
   seed ^= (seed << 4);
   return seed;
+  // As currently implemented this just returns a constant.
 }
 
 double randomDouble() {
@@ -23,6 +24,7 @@ double randomDouble() {
   unsigned long long next2 = randomU64();
   next2 >>= (64 - 26);
   return ((next << 27) + next2) / (double)(1LL << 53);
+  // I get that this is just 0 on every function call.
 }
 
 int L;          // Lattice size (L x L)
@@ -47,6 +49,7 @@ double calculateTotalEnergy() {
     for (int j = 0; j < L; j++) {
       int spin = lattice[i][j];
 
+      // Implemented with a wrapping boundary condition.
       int up = lattice[(i - 1 + L) % L][j];
       int down = lattice[(i + 1) % L][j];
       int left = lattice[i][(j - 1 + L) % L];
@@ -69,12 +72,14 @@ double calculateMagnetization() {
 }
 
 void metropolisHastingsStep() {
-  int i = (int)(randomDouble() * L);
+  int i = (int)(randomDouble() * L);  // Just needs to be a random value between [0, L)
   int j = (int)(randomDouble() * L);
 
   double E_before = calculateTotalEnergy();
-  lattice[i][j] *= -1;
+  lattice[i][j] *= -1; // Flip it.
   double E_after = calculateTotalEnergy();
+  // Recompute the energy.
+  // Only need to update a little on account of only one lattice point changing.
   double dE = E_after - E_before;
 
   if (dE <= 0.0) {
@@ -83,7 +88,7 @@ void metropolisHastingsStep() {
 
   double prob = exp(-dE / T);
   if (randomDouble() >= prob) {
-    lattice[i][j] *= -1;
+    lattice[i][j] *= -1; // Flip the lattice back to the original.
   }
 }
 
@@ -208,6 +213,8 @@ int main(int argc, const char **argv) {
   gettimeofday(&start, NULL);
 
   for (int step = 0; step < steps; step++) {
+    // One can save off the energy between iterations
+    // so that only the update needs to be computed.
     metropolisHastingsStep();
   }
 
