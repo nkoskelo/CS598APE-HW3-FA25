@@ -15,7 +15,6 @@ unsigned long long randomU64() {
   seed ^= (seed >> 35);
   seed ^= (seed << 4);
   return seed;
-  // As currently implemented this just returns a constant.
 }
 
 double randomDouble() {
@@ -24,7 +23,6 @@ double randomDouble() {
   unsigned long long next2 = randomU64();
   next2 >>= (64 - 26);
   return ((next << 27) + next2) / (double)(1LL << 53);
-  // I get that this is just 0 on every function call.
 }
 
 int L;          // Lattice size (L x L)
@@ -63,6 +61,8 @@ double calculateTotalEnergy() {
 
 double calculateMagnetization() {
   double mag = 0.0;
+  // This part is can be naively parallel
+  // but it is not in the timed loop.
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
       mag += lattice[i][j];
@@ -72,7 +72,8 @@ double calculateMagnetization() {
 }
 
 void metropolisHastingsStep() {
-  int i = (int)(randomDouble() * L);  // Just needs to be a random value between [0, L)
+  // Just needs to be a random value between [0, L)
+  int i = (int)(randomDouble() * L);
   int j = (int)(randomDouble() * L);
 
   double E_before = calculateTotalEnergy();
