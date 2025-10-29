@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <assert.h>
+#include <stdbool.h>
 
 float tdiff(struct timeval *start, struct timeval *end) {
   return (end->tv_sec - start->tv_sec) + 1e-6 * (end->tv_usec - start->tv_usec);
@@ -59,6 +61,20 @@ double calculateTotalEnergy() {
   return 0.5 * energy;
 }
 
+double calculateEnergyDifferenceIfFlipped(int i, int j){
+    double delta = 0.0;
+    // Energy = sum(s_i * s_j) / 2 (since each pair counted twice).
+    // Flipping subtracts the contributed term twice, once to 
+    // get rid of the current contribution, and once to add the negative contribution.
+    int spin = lattice[i][j];
+    int up = lattice[(i - 1 + L) % L][j];
+    int down = lattice[(i + 1) % L][j];
+    int left = lattice[i][(j - 1 + L) % L];
+    int right = lattice[i][(j + 1) % L];
+    delta +=  2 * J * spin * (up + down + left + right);
+    return delta;
+}
+
 double calculateMagnetization() {
   double mag = 0.0;
   // This part is can be naively parallel
@@ -76,20 +92,10 @@ void metropolisHastingsStep() {
   int i = (int)(randomDouble() * L);
   int j = (int)(randomDouble() * L);
 
-  double E_before = calculateTotalEnergy();
-  lattice[i][j] *= -1; // Flip it.
-  double E_after = calculateTotalEnergy();
-  // Recompute the energy.
-  // Only need to update a little on account of only one lattice point changing.
-  double dE = E_after - E_before;
-
-  if (dE <= 0.0) {
-    return;
-  }
-
-  double prob = exp(-dE / T);
-  if (randomDouble() >= prob) {
-    lattice[i][j] *= -1; // Flip the lattice back to the original.
+  double dE = calculateEnergyDifferenceIfFlipped(i, j);
+  bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
+  if (accept) {
+    lattice[i][j] *= -1;
   }
 }
 
