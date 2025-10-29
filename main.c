@@ -62,7 +62,6 @@ double calculateTotalEnergy() {
 }
 
 double calculateEnergyDifferenceIfFlipped(int i, int j){
-    double delta = 0.0;
     // Energy = sum(s_i * s_j) / 2 (since each pair counted twice).
     // Flipping subtracts the contributed term twice, once to 
     // get rid of the current contribution, and once to add the negative contribution.
@@ -71,8 +70,7 @@ double calculateEnergyDifferenceIfFlipped(int i, int j){
     char down = lattice[(i + 1) % L][j];
     char left = lattice[i][(j - 1 + L) % L];
     char right = lattice[i][(j + 1) % L];
-    delta +=  2 * J * spin * (up + down + left + right);
-    return delta;
+    return 2 * J * spin * (up + down + left + right);
 }
 
 double calculateMagnetization() {
