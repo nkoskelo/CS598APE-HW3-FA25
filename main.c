@@ -30,12 +30,12 @@ double randomDouble() {
 int L;          // Lattice size (L x L)
 double T;       // Temperature
 double J = 1.0; // Coupling constant
-int **lattice;
+char **lattice;
 
 void initializeLattice() {
-  lattice = (int **)malloc(sizeof(int *) * L);
+  lattice = (char **)malloc(sizeof(int *) * L);
   for (int i = 0; i < L; i++) {
-    lattice[i] = (int *)malloc(sizeof(int) * L);
+    lattice[i] = (char *)malloc(sizeof(int) * L);
     for (int j = 0; j < L; j++) {
       lattice[i][j] = (randomDouble() < 0.5) ? -1 : 1;
     }
@@ -47,13 +47,13 @@ double calculateTotalEnergy() {
 
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
-      int spin = lattice[i][j];
+      char spin = lattice[i][j];
 
       // Implemented with a wrapping boundary condition.
-      int up = lattice[(i - 1 + L) % L][j];
-      int down = lattice[(i + 1) % L][j];
-      int left = lattice[i][(j - 1 + L) % L];
-      int right = lattice[i][(j + 1) % L];
+      char up = lattice[(i - 1 + L) % L][j];
+      char down = lattice[(i + 1) % L][j];
+      char left = lattice[i][(j - 1 + L) % L];
+      char right = lattice[i][(j + 1) % L];
 
       energy += -J * spin * (up + down + left + right);
     }
@@ -66,11 +66,11 @@ double calculateEnergyDifferenceIfFlipped(int i, int j){
     // Energy = sum(s_i * s_j) / 2 (since each pair counted twice).
     // Flipping subtracts the contributed term twice, once to 
     // get rid of the current contribution, and once to add the negative contribution.
-    int spin = lattice[i][j];
-    int up = lattice[(i - 1 + L) % L][j];
-    int down = lattice[(i + 1) % L][j];
-    int left = lattice[i][(j - 1 + L) % L];
-    int right = lattice[i][(j + 1) % L];
+    char spin = lattice[i][j];
+    char up = lattice[(i - 1 + L) % L][j];
+    char down = lattice[(i + 1) % L][j];
+    char left = lattice[i][(j - 1 + L) % L];
+    char right = lattice[i][(j + 1) % L];
     delta +=  2 * J * spin * (up + down + left + right);
     return delta;
 }
