@@ -6,6 +6,33 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#define MEASURE_CONVERGENCE
+
+#ifdef MEASURE_CONVERGENCE
+char* visited;
+int visited_count = 0;
+void init_visited(int L) {
+    visited = (char*)malloc(sizeof(char) * L * L);
+    memset(visited, 0, sizeof(char) * L * L);
+    visited_count = 0;
+}
+void mark_visited(int L, int i, int j) {
+    int idx = i * L + j;
+    if (!visited[idx]) {
+        visited[idx] = 1;
+        visited_count++;
+    }
+}
+void free_visited() {
+    free(visited);
+}
+void log_convergence(int L, int step, double energy) {
+  double prop_visited = visited_count / (double)(L * L);
+  double avg_energy_per_spin = energy / (L * L);
+  printf("Convergence for step %d: visited = %d, energy = %f, prop_visited = %f, avg_energy_per_spin = %f\n", step, visited_count, energy, prop_visited, avg_energy_per_spin);
+}
+#endif
+
 float tdiff(struct timeval *start, struct timeval *end) {
   return (end->tv_sec - start->tv_sec) + 1e-6 * (end->tv_usec - start->tv_usec);
 }
@@ -89,6 +116,10 @@ void metropolisHastingsStep() {
   // Just needs to be a random value between [0, L)
   int i = (int)(randomDouble() * L);
   int j = (int)(randomDouble() * L);
+
+  #ifdef MEASURE_CONVERGENCE
+    mark_visited(L, i, j);
+  #endif
 
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
   bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
@@ -214,10 +245,20 @@ int main(int argc, const char **argv) {
 
   saveLatticeImage("initial_state.png");
 
+  #ifdef MEASURE_CONVERGENCE
+    init_visited(L);
+  #endif
+
   struct timeval start, end;
   gettimeofday(&start, NULL);
 
+
   for (int step = 0; step < steps; step++) {
+    #ifdef MEASURE_CONVERGENCE
+    if (step % 100 == 0) {
+      log_convergence(L, step, calculateTotalEnergy());
+    }
+    #endif
     // One can save off the energy between iterations
     // so that only the update needs to be computed.
     metropolisHastingsStep();
@@ -238,5 +279,8 @@ int main(int argc, const char **argv) {
   saveLatticeImage("final_state.png");
 
   freeLattice();
+  #ifdef MEASURE_CONVERGENCE
+    free_visited();
+  #endif
   return 0;
 }
