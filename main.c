@@ -5,8 +5,10 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <omp.h>
+#include <time.h>
 
-#define MEASURE_CONVERGENCE
+// #define MEASURE_CONVERGENCE
 
 #ifdef MEASURE_CONVERGENCE
 char* visited;
@@ -32,6 +34,34 @@ void log_convergence(int L, int step, double energy) {
   printf("Convergence for step %d: visited = %d, energy = %f, prop_visited = %f, avg_energy_per_spin = %f\n", step, visited_count, energy, prop_visited, avg_energy_per_spin);
 }
 #endif
+
+
+struct drand48_data *rand_buffers;
+
+void initialize_random_state(int num_threads)
+{
+  rand_buffers = malloc(num_threads * sizeof(struct drand48_data));
+  for (int i = 0; i < num_threads; ++i)
+  {
+    // Pull seeds from the original RNG in some sufficiently
+    // uncorrelated way.
+    long seed = rand() + time(NULL) + 100 * i;
+    srand48_r(seed, &rand_buffers[i]);
+  }
+}
+
+void cleanup_random_state()
+{
+  free(rand_buffers);
+}
+
+double gen_rand_double_r()
+{
+  int tid = omp_get_thread_num();
+  double result;
+  drand48_r(&rand_buffers[tid], &result);
+  return result;
+}
 
 float tdiff(struct timeval *start, struct timeval *end) {
   return (end->tv_sec - start->tv_sec) + 1e-6 * (end->tv_usec - start->tv_usec);
@@ -114,15 +144,15 @@ double calculateMagnetization() {
 
 void metropolisHastingsStep() {
   // Just needs to be a random value between [0, L)
-  int i = (int)(randomDouble() * L);
-  int j = (int)(randomDouble() * L);
+  int i = (int) (gen_rand_double_r() * L);
+  int j = (int) (gen_rand_double_r() * L);
 
   #ifdef MEASURE_CONVERGENCE
     mark_visited(L, i, j);
   #endif
 
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
-  bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
+  bool accept = dE <= 0.0 || gen_rand_double_r() < exp(-dE / T);
   if (accept) {
     lattice[i][j] *= -1;
   }
@@ -226,6 +256,9 @@ int main(int argc, const char **argv) {
   T = atof(argv[2]);
   int steps = atoi(argv[3]);
 
+  omp_set_num_threads(4);
+  initialize_random_state(4);
+
   printf("2D Ising Model\n");
   printf("=================================================\n");
   printf("Lattice size: %d x %d (%d spins)\n", L, L, L * L);
@@ -253,6 +286,7 @@ int main(int argc, const char **argv) {
   gettimeofday(&start, NULL);
 
 
+  #pragma omp parallel for schedule(dynamic, 10000)
   for (int step = 0; step < steps; step++) {
     #ifdef MEASURE_CONVERGENCE
     if (step % 100 == 0) {
@@ -282,5 +316,6 @@ int main(int argc, const char **argv) {
   #ifdef MEASURE_CONVERGENCE
     free_visited();
   #endif
+  cleanup_random_state();
   return 0;
 }
