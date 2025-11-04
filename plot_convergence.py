@@ -11,6 +11,8 @@ import numpy as np
 import os
 import argparse
 
+max_step = 200000
+
 expected_energy_convergence = -1.414
 
 
@@ -23,6 +25,8 @@ def parse_file(filename):
         for line in f:
             match = pattern.search(line)
             if match:
+                if int(match.group(1)) > max_step:
+                    continue
                 steps.append(int(match.group(1)))
                 prop_visited.append(float(match.group(2)))
                 avg_energy_per_spin.append(float(match.group(3)))
@@ -39,6 +43,7 @@ def plot_convergence(filenames):
     # Draw horizontal line at 1.0
     plt.axhline(y=1.0, color='r', linestyle='--', label='Full Coverage (1.0)')
     plt.xlabel('Step')
+    plt.xscale('log')
     plt.ylabel('Proportion Visited')
     plt.title('Proportion of Lattice Visited Over Time')
     plt.legend()
@@ -52,6 +57,7 @@ def plot_convergence(filenames):
     # Draw horizontal line at expected energy convergence
     plt.axhline(y=expected_energy_convergence, color='r', linestyle='--', label=f'Expected Energy ({expected_energy_convergence})')
     plt.xlabel('Step')
+    plt.xscale('log')
     plt.ylabel('Average Energy per Spin')
     plt.title('Average Energy per Spin Over Time')
     plt.legend()

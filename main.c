@@ -37,7 +37,7 @@ float tdiff(struct timeval *start, struct timeval *end) {
   return (end->tv_sec - start->tv_sec) + 1e-6 * (end->tv_usec - start->tv_usec);
 }
 
-unsigned long long seed = 100;
+unsigned long long seed = 13382489882081793017ul;
 
 unsigned long long randomU64() {
   seed ^= (seed << 21);
@@ -64,7 +64,7 @@ void initializeLattice() {
   for (int i = 0; i < L; i++) {
     lattice[i] = (char *)malloc(sizeof(int) * L);
     for (int j = 0; j < L; j++) {
-      lattice[i][j] = (randomDouble() < 0.5) ? -1 : 1;
+      lattice[i][j] = ((rand() / (double) RAND_MAX) < 0.5) ? -1 : 1;
     }
   }
 }
@@ -112,17 +112,25 @@ double calculateMagnetization() {
   return mag / (L * L);
 }
 
+int stride = 7;
+int rv = 0;
+
 void metropolisHastingsStep() {
   // Just needs to be a random value between [0, L)
-  int i = (int)(randomDouble() * L);
-  int j = (int)(randomDouble() * L);
+  // int i = (int)(randomU64() % L);
+  // int j = (int)(randomU64() % L);
+  // int rv = (int) ((rand() / (double) RAND_MAX) * L*L);
+  rv = (rv + stride) % (L * L);
+  int i = rv / L;
+  int j = rv % L;
+  // int j = (int) ((rand() / (double) RAND_MAX) * L);
 
   #ifdef MEASURE_CONVERGENCE
     mark_visited(L, i, j);
   #endif
 
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
-  bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
+  bool accept = dE <= 0.0 || (rand() / (double) RAND_MAX) < exp(-dE / T);
   if (accept) {
     lattice[i][j] *= -1;
   }
@@ -213,6 +221,19 @@ void freeLattice() {
   free(lattice);
 }
 
+void hot_loop_placeholder_function(int steps){
+  for (int step = 0; step < steps; step++) {
+    #ifdef MEASURE_CONVERGENCE
+    if (step % (10 * L) == 0) {
+      log_convergence(L, step, calculateTotalEnergy());
+    }
+    #endif
+    // One can save off the energy between iterations
+    // so that only the update needs to be computed.
+    metropolisHastingsStep();
+  }
+}
+
 int main(int argc, const char **argv) {
   if (argc < 4) {
     printf("Usage: %s <lattice_size> <temperature> <steps>\n", argv[0]);
@@ -252,17 +273,7 @@ int main(int argc, const char **argv) {
   struct timeval start, end;
   gettimeofday(&start, NULL);
 
-
-  for (int step = 0; step < steps; step++) {
-    #ifdef MEASURE_CONVERGENCE
-    if (step % 100 == 0) {
-      log_convergence(L, step, calculateTotalEnergy());
-    }
-    #endif
-    // One can save off the energy between iterations
-    // so that only the update needs to be computed.
-    metropolisHastingsStep();
-  }
+  hot_loop_placeholder_function(steps);
 
   gettimeofday(&end, NULL);
 
