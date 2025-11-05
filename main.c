@@ -144,15 +144,15 @@ double calculateMagnetization() {
 
 void metropolisHastingsStep() {
   // Just needs to be a random value between [0, L)
-  int i = (int) (randomDouble() * L);
-  int j = (int) (randomDouble() * L);
+  int i = (int) (gen_rand_double_r() * L);
+  int j = (int) (gen_rand_double_r() * L);
 
   #ifdef MEASURE_CONVERGENCE
     mark_visited(L, i, j);
   #endif
 
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
-  bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
+  bool accept = dE <= 0.0 || gen_rand_double_r() < exp(-dE / T);
   if (accept) {
     lattice[i][j] *= -1;
   }
