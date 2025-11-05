@@ -144,15 +144,15 @@ double calculateMagnetization() {
 
 void metropolisHastingsStep() {
   // Just needs to be a random value between [0, L)
-  int i = (int) (gen_rand_double_r() * L);
-  int j = (int) (gen_rand_double_r() * L);
+  int i = (int) (randomDouble() * L);
+  int j = (int) (randomDouble() * L);
 
   #ifdef MEASURE_CONVERGENCE
     mark_visited(L, i, j);
   #endif
 
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
-  bool accept = dE <= 0.0 || gen_rand_double_r() < exp(-dE / T);
+  bool accept = dE <= 0.0 || randomDouble() < exp(-dE / T);
   if (accept) {
     lattice[i][j] *= -1;
   }
@@ -286,7 +286,7 @@ int main(int argc, const char **argv) {
   gettimeofday(&start, NULL);
 
 
-  #pragma omp parallel for schedule(dynamic, 10000)
+  #pragma omp parallel for
   for (int step = 0; step < steps; step++) {
     #ifdef MEASURE_CONVERGENCE
     if (step % 100 == 0) {
