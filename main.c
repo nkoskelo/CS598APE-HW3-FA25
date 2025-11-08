@@ -35,18 +35,25 @@ void log_convergence(int L, int step, double energy) {
 }
 #endif
 
+// Waste space so that cache coherence doesn't burn us
+#define CACHE_LINE_SIZE 64
+struct padded_drand48_data
+{
+  struct drand48_data data;
+  char padding[CACHE_LINE_SIZE - sizeof(struct drand48_data)];
+};
 
-struct drand48_data *rand_buffers;
+struct padded_drand48_data *rand_buffers;
 
 void initialize_random_state(int num_threads)
 {
-  rand_buffers = malloc(num_threads * sizeof(struct drand48_data));
+  rand_buffers = aligned_alloc(CACHE_LINE_SIZE, num_threads * sizeof(struct padded_drand48_data));
   for (int i = 0; i < num_threads; ++i)
   {
     // Pull seeds from the original RNG in some sufficiently
     // uncorrelated way.
     long seed = rand() + time(NULL) + 100 * i;
-    srand48_r(seed, &rand_buffers[i]);
+    srand48_r(seed, &rand_buffers[i].data);
   }
 }
 
@@ -59,7 +66,7 @@ double gen_rand_double_r()
 {
   int tid = omp_get_thread_num();
   double result;
-  drand48_r(&rand_buffers[tid], &result);
+  drand48_r(&rand_buffers[tid].data, &result);
   return result;
 }
 
@@ -256,7 +263,7 @@ int main(int argc, const char **argv) {
   T = atof(argv[2]);
   int steps = atoi(argv[3]);
 
-  omp_set_num_threads(4);
+  omp_set_num_threads(1);
   initialize_random_state(4);
 
   printf("2D Ising Model\n");
