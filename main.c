@@ -18,6 +18,7 @@ void init_visited(int L) {
     memset(visited, 0, sizeof(char) * L * L);
     visited_count = 0;
 }
+
 void mark_visited(int L, int i, int j) {
     int idx = i * L + j;
     if (!visited[idx]) {
@@ -35,8 +36,17 @@ void log_convergence(int L, int step, double energy) {
 }
 #endif
 
+int L;          // Lattice size (L x L)
+double T;       // Temperature
+double J = 1.0; // Coupling constant
+char *lattice;
+
+inline int latticeIndex(int i, int j) {
+  return i * L + j;
+}
+
 // Waste space so that cache coherence doesn't burn us
-#define CACHE_LINE_SIZE 64
+#define CACHE_LINE_SIZE 4096
 struct padded_drand48_data
 {
   struct drand48_data data;
@@ -91,33 +101,30 @@ double randomDouble() {
   return ((next << 27) + next2) / (double)(1LL << 53);
 }
 
-int L;          // Lattice size (L x L)
-double T;       // Temperature
-double J = 1.0; // Coupling constant
-char **lattice;
+
 
 void initializeLattice() {
-  lattice = (char **)malloc(sizeof(int *) * L);
+  lattice = (char *)malloc(sizeof(char) * L * L);
   for (int i = 0; i < L; i++) {
-    lattice[i] = (char *)malloc(sizeof(int) * L);
     for (int j = 0; j < L; j++) {
-      lattice[i][j] = (randomDouble() < 0.5) ? -1 : 1;
+      lattice[latticeIndex(i, j)] = (randomDouble() < 0.5) ? -1 : 1;
     }
   }
 }
+
 
 double calculateTotalEnergy() {
   double energy = 0.0;
 
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
-      char spin = lattice[i][j];
+      char spin = lattice[latticeIndex(i, j)];
 
       // Implemented with a wrapping boundary condition.
-      char up = lattice[(i - 1 + L) % L][j];
-      char down = lattice[(i + 1) % L][j];
-      char left = lattice[i][(j - 1 + L) % L];
-      char right = lattice[i][(j + 1) % L];
+      char up = lattice[latticeIndex((i - 1 + L) % L, j)];
+      char down = lattice[latticeIndex((i + 1) % L, j)];
+      char left = lattice[latticeIndex(i, (j - 1 + L) % L)];
+      char right = lattice[latticeIndex(i, (j + 1) % L)];
 
       energy += -J * spin * (up + down + left + right);
     }
@@ -129,11 +136,11 @@ double calculateEnergyDifferenceIfFlipped(int i, int j){
     // Energy = sum(s_i * s_j) / 2 (since each pair counted twice).
     // Flipping subtracts the contributed term twice, once to 
     // get rid of the current contribution, and once to add the negative contribution.
-    char spin = lattice[i][j];
-    char up = lattice[(i - 1 + L) % L][j];
-    char down = lattice[(i + 1) % L][j];
-    char left = lattice[i][(j - 1 + L) % L];
-    char right = lattice[i][(j + 1) % L];
+    char spin = lattice[latticeIndex(i, j)];
+    char up = lattice[latticeIndex((i - 1 + L) % L, j)];
+    char down = lattice[latticeIndex((i + 1) % L, j)];
+    char left = lattice[latticeIndex(i, (j - 1 + L) % L)];
+    char right = lattice[latticeIndex(i, (j + 1) % L)];
     return 2 * J * spin * (up + down + left + right);
 }
 
@@ -143,7 +150,7 @@ double calculateMagnetization() {
   // but it is not in the timed loop.
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
-      mag += lattice[i][j];
+      mag += lattice[latticeIndex(i, j)];
     }
   }
   return mag / (L * L);
@@ -161,7 +168,7 @@ void metropolisHastingsStep() {
   double dE = calculateEnergyDifferenceIfFlipped(i, j);
   bool accept = dE <= 0.0 || gen_rand_double_r() < exp(-dE / T);
   if (accept) {
-    lattice[i][j] *= -1;
+    lattice[latticeIndex(i, j)] *= -1;
   }
 }
 
@@ -182,7 +189,7 @@ void saveLatticeImage(const char *png_filename) {
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
       unsigned char r, g, b;
-      if (lattice[i][j] == 1) {
+      if (lattice[latticeIndex(i, j)] == 1) {
         r = 255;
         g = 255;
         b = 255;
@@ -244,9 +251,6 @@ void sanityCheck(double energy, double mag_per_spin, const char *stage) {
 }
 
 void freeLattice() {
-  for (int i = 0; i < L; i++) {
-    free(lattice[i]);
-  }
   free(lattice);
 }
 
@@ -263,7 +267,7 @@ int main(int argc, const char **argv) {
   T = atof(argv[2]);
   int steps = atoi(argv[3]);
 
-  omp_set_num_threads(1);
+  omp_set_num_threads(4);
   initialize_random_state(4);
 
   printf("2D Ising Model\n");
