@@ -41,12 +41,18 @@ double T;       // Temperature
 double J = 1.0; // Coupling constant
 char *lattice;
 
+const int bits = 3;
+const int mask = (1 << bits) - 1;
 inline int latticeIndex(int i, int j) {
+  
+  // int lineIndex = ((i & mask) << bits) + (j & mask);
+  // int tileIndex = (i >> bits) * (L >> bits) + (j >> bits);
+  // return tileIndex * (1 << (2 * bits)) + lineIndex;
   return i * L + j;
 }
 
 // Waste space so that cache coherence doesn't burn us
-#define CACHE_LINE_SIZE 4096
+#define CACHE_LINE_SIZE 64
 struct padded_drand48_data
 {
   struct drand48_data data;
@@ -104,7 +110,7 @@ double randomDouble() {
 
 
 void initializeLattice() {
-  lattice = (char *)malloc(sizeof(char) * L * L);
+  lattice = (char *)aligned_alloc(64, sizeof(char) * L * L);
   for (int i = 0; i < L; i++) {
     for (int j = 0; j < L; j++) {
       lattice[latticeIndex(i, j)] = (randomDouble() < 0.5) ? -1 : 1;
@@ -156,9 +162,10 @@ double calculateMagnetization() {
   return mag / (L * L);
 }
 
-void metropolisHastingsStep() {
+// row_start : inclusive, row_stop : exclusive
+void metropolisHastingsStep(int row_start, int row_stop) {
   // Just needs to be a random value between [0, L)
-  int i = (int) (gen_rand_double_r() * L);
+  int i = (int) (gen_rand_double_r() * (row_stop - row_start)) + row_start;
   int j = (int) (gen_rand_double_r() * L);
 
   #ifdef MEASURE_CONVERGENCE
@@ -267,8 +274,10 @@ int main(int argc, const char **argv) {
   T = atof(argv[2]);
   int steps = atoi(argv[3]);
 
-  omp_set_num_threads(4);
-  initialize_random_state(4);
+  int n_threads = 4;
+  int rows_per_thread = (L + n_threads - 1) / n_threads;
+  omp_set_num_threads(n_threads);
+  initialize_random_state(n_threads);
 
   printf("2D Ising Model\n");
   printf("=================================================\n");
@@ -306,7 +315,11 @@ int main(int argc, const char **argv) {
     #endif
     // One can save off the energy between iterations
     // so that only the update needs to be computed.
-    metropolisHastingsStep();
+    int thread_id = omp_get_thread_num();
+    int row_start = thread_id * rows_per_thread;
+    int row_stop = (thread_id + 1) * rows_per_thread;
+    row_stop = (row_stop > L) ? L : row_stop;
+    metropolisHastingsStep(row_start, row_stop);
   }
 
   gettimeofday(&end, NULL);
