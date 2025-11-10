@@ -40,6 +40,7 @@ int L;          // Lattice size (L x L)
 double T;       // Temperature
 double J = 1.0; // Coupling constant
 char *lattice;
+double *exponential_lookup_table; // Only a small number of options so just precompute them.
 
 const int bits = 3;
 const int mask = (1 << bits) - 1;
@@ -76,6 +77,21 @@ void initialize_random_state(int num_threads)
 void cleanup_random_state()
 {
   free(rand_buffers);
+}
+
+void initialize_exponential_table(int num_threads){
+  exponential_lookup_table = aligned_alloc(CACHE_LINE_SIZE,(8)*sizeof(double));
+
+  // Only need 0, 2, 4 for indices.
+  for (int i = 0; i < 8; i++){
+    exponential_lookup_table[i] = 0;
+  }
+  exponential_lookup_table[0] = 1;
+  exponential_lookup_table[2] = exp(-2*J*2 / T);
+  exponential_lookup_table[4] = exp(-2*J*4 / T);
+}
+void free_exponential_table(){
+  free(exponential_lookup_table);
 }
 
 double gen_rand_double_r()
@@ -138,7 +154,7 @@ double calculateTotalEnergy() {
   return 0.5 * energy;
 }
 
-double calculateEnergyDifferenceIfFlipped(int i, int j){
+char calculateEnergyDifferenceIfFlipped(int i, int j){
     // Energy = sum(s_i * s_j) / 2 (since each pair counted twice).
     // Flipping subtracts the contributed term twice, once to 
     // get rid of the current contribution, and once to add the negative contribution.
@@ -147,7 +163,7 @@ double calculateEnergyDifferenceIfFlipped(int i, int j){
     char down = lattice[latticeIndex((i + 1) % L, j)];
     char left = lattice[latticeIndex(i, (j - 1 + L) % L)];
     char right = lattice[latticeIndex(i, (j + 1) % L)];
-    return 2 * J * spin * (up + down + left + right);
+    return spin * (up + down + left + right);
 }
 
 double calculateMagnetization() {
@@ -162,6 +178,8 @@ double calculateMagnetization() {
   return mag / (L * L);
 }
 
+
+
 // row_start : inclusive, row_stop : exclusive
 void metropolisHastingsStep(int row_start, int row_stop) {
   // Just needs to be a random value between [0, L)
@@ -172,8 +190,8 @@ void metropolisHastingsStep(int row_start, int row_stop) {
     mark_visited(L, i, j);
   #endif
 
-  double dE = calculateEnergyDifferenceIfFlipped(i, j);
-  bool accept = dE <= 0.0 || gen_rand_double_r() < exp(-dE / T);
+  char dE = calculateEnergyDifferenceIfFlipped(i, j);
+  bool accept = dE <= 0.0 || gen_rand_double_r() < exponential_lookup_table[dE];
   if (accept) {
     lattice[latticeIndex(i, j)] *= -1;
   }
@@ -279,6 +297,8 @@ int main(int argc, const char **argv) {
   omp_set_num_threads(n_threads);
   initialize_random_state(n_threads);
 
+  initialize_exponential_table(n_threads);
+
   printf("2D Ising Model\n");
   printf("=================================================\n");
   printf("Lattice size: %d x %d (%d spins)\n", L, L, L * L);
@@ -307,6 +327,7 @@ int main(int argc, const char **argv) {
 
 
   #pragma omp parallel for schedule(dynamic, 10000)
+  // #pragma omp parallel for
   for (int step = 0; step < steps; step++) {
     #ifdef MEASURE_CONVERGENCE
     if (step % 100 == 0) {
@@ -341,5 +362,6 @@ int main(int argc, const char **argv) {
     free_visited();
   #endif
   cleanup_random_state();
+  free_exponential_table();
   return 0;
 }
