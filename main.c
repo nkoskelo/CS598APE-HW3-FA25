@@ -291,6 +291,7 @@ int main(int argc, const char **argv) {
   L = atoi(argv[1]);
   T = atof(argv[2]);
   int steps = atoi(argv[3]);
+  int unroll_size = atoi(argv[4]);
 
   int n_threads = 4;
   int rows_per_thread = (L + n_threads - 1) / n_threads;
@@ -316,7 +317,7 @@ int main(int argc, const char **argv) {
 
   sanityCheck(initial_energy, initial_mag, "Initial state");
 
-  saveLatticeImage("initial_state.png");
+  // saveLatticeImage("initial_state.png");
 
   #ifdef MEASURE_CONVERGENCE
     init_visited(L);
@@ -326,9 +327,9 @@ int main(int argc, const char **argv) {
   gettimeofday(&start, NULL);
 
 
-  #pragma omp parallel for schedule(dynamic, 10000)
-  // #pragma omp parallel for
-  for (int step = 0; step < steps; step++) {
+  // #pragma omp parallel for schedule(dynamic, 10000)
+  #pragma omp parallel for
+  for (int step = 0; step < steps / unroll_size; step++) {
     #ifdef MEASURE_CONVERGENCE
     if (step % 100 == 0) {
       log_convergence(L, step, calculateTotalEnergy());
@@ -340,7 +341,10 @@ int main(int argc, const char **argv) {
     int row_start = thread_id * rows_per_thread;
     int row_stop = (thread_id + 1) * rows_per_thread;
     row_stop = (row_stop > L) ? L : row_stop;
-    metropolisHastingsStep(row_start, row_stop);
+    #pragma omp simd
+    for (int i = 0; i < unroll_size; i++){
+      metropolisHastingsStep(row_start, row_stop);
+    }
   }
 
   gettimeofday(&end, NULL);
@@ -355,7 +359,7 @@ int main(int argc, const char **argv) {
 
   printf("Total time: %0.6f seconds\n\n", tdiff(&start, &end));
 
-  saveLatticeImage("final_state.png");
+  // saveLatticeImage("final_state.png");
 
   freeLattice();
   #ifdef MEASURE_CONVERGENCE
