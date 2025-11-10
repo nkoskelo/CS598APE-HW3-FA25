@@ -27,7 +27,7 @@ Initial - 3d0550609610e188a2ea1bbfd10b9345b8e73dc0
 
 Optimization 1 Predict $\Delta E$ - 3d0550609610e188a2ea1bbfd10b9345b8e73dc0
 
-Optimization 2 Reduce Data Storage Size - fd8e2e7b76978e594edb6703e5cc566c87bb2f45
+Optimization 2 Reduce Data Storage Size - 83305cea551edf6f0b791d77ab53b8a8fff7cbef
 
 Optimization 3 Return $\Delta E$ directly - 88dd48dc02ae052be21034ce08460ac560b19518
 
