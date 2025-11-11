@@ -1,0 +1,12 @@
+Name,Small (1M its),Cumulative Speedup,Individual Speedup,Large (100M its),Cumulative Speedup,Individual Speedup,Large Long (1B its),Cumulative Speedup,Individual Speedup
+Initial,138.1527,1.00x,1.00x,1411.9099,1.00x,1.00x,14105928.0000,1.00x,1.00x
+Predict dE,0.0895,1543.17x,1543.17x,0.0139,101620.12x,101620.12x,102.4418,137697.00x,137697.00x
+Reduce Storage,0.0455,3038.86x,1.97x,0.0052,269912.04x,2.66x,51.0210,276473.03x,2.01x
+Return dE Directly,0.0446,3098.64x,1.02x,0.0052,273997.65x,1.02x,50.6669,278405.17x,1.01x
+Naive Parallelism,0.0735,1878.79x,0.61x,0.0071,198748.58x,0.73x,74.0826,190408.16x,0.68x
+Parallel Rand (Without Balance),0.0859,1607.77x,0.86x,0.0068,207786.59x,1.05x,80.6048,175001.20x,0.92x
+Parallel Rand (Load Balancing),0.0849,1626.84x,1.01x,0.0068,208092.84x,1.00x,80.2227,175834.57x,1.00x
+Rand Seed False Sharing,0.0616,2241.03x,1.38x,0.0090,157018.45x,0.75x,67.1128,210182.50x,1.20x
+Partitioned Rows,0.0173,8000.51x,3.57x,0.0029,483034.52x,3.08x,15.9137,886403.70x,4.22x
+Precompute Exponentials,0.0151,9175.93x,1.15x,0.0020,705602.15x,1.46x,13.0484,1081044.91x,1.22x
+Unroll Inner Loop,0.0216,6404.86x,0.70x,0.0023,626679.94x,0.89x,12.8248,1099895.18x,1.02x
