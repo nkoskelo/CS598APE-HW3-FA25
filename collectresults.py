@@ -11,7 +11,7 @@ import csv
 # Don't have git, so use subprocess to call git commands.
 
 
-def run_experiment(commit_hash, experiment_args, repeats = 3):
+def run_experiment(commit_hash, experiment_args, repeats = 1):
     """
     Run the experiment at the given commit hash with specified arguments and number of repeats.
     Returns the array of results.
@@ -36,13 +36,17 @@ def run_experiment(commit_hash, experiment_args, repeats = 3):
     return results
 
 commits = [
-    # ("Initial", "3d0550609610e188a2ea1bbfd10b9345b8e73dc0"),
+    ("Initial", "3d0550609610e188a2ea1bbfd10b9345b8e73dc0"),
     ("Predict dE", "83305cea551edf6f0b791d77ab53b8a8fff7cbef"),
     ("Reduce Storage", "fd8e2e7b76978e594edb6703e5cc566c87bb2f45"),
     ("Return dE Directly", "88dd48dc02ae052be21034ce08460ac560b19518"),
     ("Naive Parallelism", "8c6b7940ed3d1c518fc6dc71622d6ee4b9c967cd"),
     ("Parallel Rand (Without Balance)", "5b09082cc7e0cd91cf1b01c31f14f123fa596b69"),
-    ("Parallel Rand (Load Balancing)", "fc4d7eeafd514e4c15a9bef1ffcbbb0e293ccf3e")
+    ("Parallel Rand (Load Balancing)", "fc4d7eeafd514e4c15a9bef1ffcbbb0e293ccf3e"),
+    ("Rand Seed False Sharing", "df639a32a226f36612aa113b300e33d9c71bde79"),
+    ("Partitioned Rows", "603d8da01142deca9f939f689fdbc618769994f0"),
+    ("Precompute Exponentials", "1c3e8ea0bb88107212c6bd9814c88c43f4d09700"),
+    ("Unroll Inner Loop", "a4241e4b31442f7750bf09d4c1ca751ce1fd18fa")
 ]
 
 def avg(data):
