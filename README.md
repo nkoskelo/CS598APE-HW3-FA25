@@ -12,13 +12,13 @@ make all
 
 Our test cases were
 ```
-./main.exe 100 2.269 100000
+./main.exe 100 2.269 100000 64
 ```
 ```
-./main.exe 1024 2.269 100000
+./main.exe 1024 2.269 100000 64
 ```
 ```
-./main.exe 1024 2.269 1000000000
+./main.exe 1024 2.269 1000000000 64
 ```
 
 Please checkout the following commits to see reproduce the times for those optimizations.
